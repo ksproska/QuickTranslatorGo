@@ -72,6 +72,7 @@ func removeLinesContainingTimestamps(content string) string {
 }
 
 func getWebsitePattern() string {
+	fmt.Println(os.Getwd())
 	readFile, err := os.ReadFile("youtube_subs.html")
 	if err != nil {
 		panic(err)
@@ -105,10 +106,11 @@ func main() {
 
 	r.Handle("/youtube/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
-		content, _ := getSubtitlesForVideoId(id)
-		content = removeLinesContainingTimestamps(content)
-		content = strings.Join(strings.Split(content, "\n")[1:], "\n")
-		content = addP(content)
+		content, err := getSubtitlesForVideoId(id)
+		if err != nil {
+			_, _ = w.Write([]byte(fmt.Sprintf(websitePattern, err.Error(), id)))
+		}
+		content = prepareContent(content)
 		_, _ = w.Write([]byte(fmt.Sprintf(websitePattern, content, id)))
 	}))
 
@@ -116,4 +118,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func prepareContent(content string) string {
+	content = removeLinesContainingTimestamps(content)
+	content = strings.Join(strings.Split(content, "\n")[1:], "\n")
+	content = addP(content)
+	return content
 }
