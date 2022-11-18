@@ -9,21 +9,25 @@
             border: 1px solid #000000;
         }
         div.subtitles {
-            margin-left: 850px;
+            margin-left: 950px;
+        }
+        .highlight {
+            background-color: yellow;
         }
     </style>
     <title>Title</title>
 </head>
 <body>
-<div id="player" class="fixed">
-<!--    <iframe width="800" height="500" src="https://www.youtube.com/embed/"></iframe>-->
+<div class="fixed">
+    <div id="player"></div>
 </div>
 <br><br>
 <div class="subtitles">
     %s
 </div>
 <script>
-    // 2. This code loads the IFrame Player API code asynchronously.
+    var currentLine = 0;
+    highlight(currentLine)
     var tag = document.createElement('script');
 
     tag.src = "https://www.youtube.com/iframe_api";
@@ -33,8 +37,8 @@
     var player;
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
-            height: '390',
-            width: '640',
+            height: '600',
+            width: '900',
             videoId: '%s',
             playerVars: {
                 'playsinline': 1
@@ -47,11 +51,22 @@
 
     }
 
+    function highlight(id) {
+        var inputText = document.getElementById(id);
+        var innerHTML = inputText.innerHTML;
+        innerHTML = "<span class='highlight'>" + innerHTML + "</span>";
+        inputText.innerHTML = innerHTML;
+        inputText.scrollIntoView();
+    }
+
     async function onPlayerReady(event) {
         event.target.playVideo();
         for (let i = 0; i < Infinity; i++) {
-            await delay(1000);
-            console.log(player.getCurrentTime());
+            await delay(100);
+            if (player.getCurrentTime() > parseFloat(document.getElementById((currentLine + 1)+"_timestamp").innerHTML)) {
+                currentLine += 1;
+                highlight(currentLine);
+            }
         }
     }
 

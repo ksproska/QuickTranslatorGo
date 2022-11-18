@@ -59,10 +59,13 @@ func removeLinesContainingTimestamps(content string) string {
 	leftLines := []string{}
 	for _, line := range lines {
 		if !strings.Contains(line, "-->") && line != "" {
-			leftLines = append(leftLines, line)
+			leftLines = append(leftLines, line+" ")
 		}
 		if line == "" {
 			leftLines = append(leftLines, "\n")
+		}
+		if strings.Contains(line, "-->") {
+			leftLines = append(leftLines, strings.Split(line, " -->")[0]+"\t")
 		}
 	}
 	return strings.Join(leftLines, "")
@@ -76,19 +79,37 @@ func getWebsitePattern() string {
 	return string(readFile)
 }
 
+func addP(content string) string {
+	lines := strings.Split(content, "\n")
+	newLines := []string{}
+	for i, line := range lines {
+		timestamp := strings.Split(line, "\t")[0]
+		timeSplited := strings.Split(timestamp, ":")
+		if len(timeSplited) >= 3 {
+			timestamp = fmt.Sprintf("%sh%sm%ss", timeSplited[0], timeSplited[1], timeSplited[2])
+			duration, _ := time.ParseDuration(timestamp)
+			timestamp = fmt.Sprintf("%v", duration.Seconds())
+		}
+
+		if strings.Contains(line, "\t") {
+			line = strings.Split(line, "\t")[1]
+		}
+		newLines = append(newLines, fmt.Sprintf("<p hidden id=\"%d_timestamp\">%s</p><p id=\"%d\">%s</p>", i, timestamp, i, line))
+	}
+	return strings.Join(newLines, "\n")
+}
+
 func main() {
 	r := mux.NewRouter()
 	websitePattern := getWebsitePattern()
 
 	r.Handle("/youtube/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := mux.Vars(r)["id"]
-		content, err := getSubtitlesForVideoId(id) // Ye8mB6VsUHw
-		log.Println(err)
+		content, _ := getSubtitlesForVideoId(id)
 		content = removeLinesContainingTimestamps(content)
-		content = strings.ReplaceAll(content, "\n", "<br>")
+		content = strings.Join(strings.Split(content, "\n")[1:], "\n")
+		content = addP(content)
 		_, _ = w.Write([]byte(fmt.Sprintf(websitePattern, content, id)))
-		time.Sleep(5 * time.Second)
-		fmt.Println(w.Header())
 	}))
 
 	err := http.ListenAndServe(":3000", r)
