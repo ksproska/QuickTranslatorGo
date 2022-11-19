@@ -9,16 +9,16 @@
             border: 1px solid #000000;
         }
         div.subtitles {
-            margin-left: 950px;
+            margin-left: 55vw;
         }
         .highlight {
-            background-color: yellow;
+            background-color: rgba(255, 165, 0, 0.5);
         }
         p {
-            font-size: 22px;
+            font-size: 24px;
         }
     </style>
-    <title>Title</title>
+    <title>YouTube Subs</title>
 </head>
 <body>
 <div class="fixed">
@@ -40,8 +40,9 @@
     var player;
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
-            height: '600',
-            width: '900',
+            height: 9*screen.width/(2*16),
+            // height: screen.height,
+            width: screen.width/2,
             videoId: '%s',
             playerVars: {
                 'playsinline': 1
