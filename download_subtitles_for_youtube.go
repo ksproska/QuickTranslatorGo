@@ -1,9 +1,12 @@
 package main
 
-import "os/exec"
+import (
+	"fmt"
+	"os/exec"
+)
 
 func downloadSubtitles(id string) error {
-	url := "https://www.youtube.com/watch?v=" + id
+	url := fmt.Sprintf("https://www.youtube.com/watch?v=%s", id)
 	cmd := exec.Command("youtube-dl", "--all-subs", "--skip-download", url)
 	err := cmd.Run()
 	return err
