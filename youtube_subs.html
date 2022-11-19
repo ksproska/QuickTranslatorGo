@@ -28,9 +28,6 @@
         <br>
         <div class="subtitles">%s</div>
         <script>
-            let currentLine = 0;
-            highlight(currentLine)
-
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
             const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -53,28 +50,28 @@
                 });
             }
 
-            function delay(time) {
-                return new Promise(resolve => setTimeout(resolve, time));
-            }
-
             function highlight(id) {
                 const inputText = document.getElementById(id);
-                let innerHTML = inputText.innerHTML;
-                innerHTML = "<span class='highlight'>" + innerHTML + "</span>";
-                inputText.innerHTML = innerHTML;
+                inputText.innerHTML = "<span class='highlight'>" + inputText.innerHTML + "</span>";
                 inputText.scrollIntoView();
             }
+
+            let currentLine = 0;
+            highlight(currentLine)
+
+            function delay(time) { return new Promise(resolve => setTimeout(resolve, time)); }
 
             async function onPlayerReady() {
                 for (let i = 0; i < Infinity; i++) {
                     await delay(100);
-                    if (player.getCurrentTime() > parseFloat(document.getElementById((currentLine + 1)+"_timestamp").innerHTML)) {
+                    const pWithTimestamp = document.getElementById((currentLine + 1) + "_timestamp");
+                    const currentLineTimestamp = parseFloat(pWithTimestamp.innerHTML);
+                    if (player.getCurrentTime() > currentLineTimestamp) {
                         currentLine += 1;
                         highlight(currentLine);
                     }
                 }
             }
-
             function onPlayerStateChange(event) {}
         </script>
     </body>
