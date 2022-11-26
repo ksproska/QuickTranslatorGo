@@ -2,17 +2,20 @@ package main
 
 import (
 	"fmt"
+	gt "github.com/bas24/googletranslatefree"
 	"strings"
+	"sync"
 	"time"
 )
 
 type subtitle struct {
-	index     int
-	startTime string
-	endTime   string
-	text      string
+	index       int
+	startTime   string
+	endTime     string
+	text        string
+	translation string
 }
-type subtitles []subtitle
+type subtitles []*subtitle
 
 func removeDescriptors(content string) string {
 	return strings.Join(strings.Split(content, "\n\n")[1:], "\n\n")
@@ -32,10 +35,12 @@ func getSecFromTime(timeStr string) (string, error) {
 	return timeStr, nil
 }
 
-func readSubtitles(content string) subtitles {
-	var subs []subtitle
+func readSubtitles(content string, sourceLang, targetLang string) subtitles {
+	var subs subtitles
 	content = removeDescriptors(content)
-	for i, line := range strings.Split(content, "\n\n") {
+	lines := strings.Split(content, "\n\n")
+	wg := sync.WaitGroup{}
+	for i, line := range lines {
 		split := strings.Split(line, "-->")
 		startTime := strings.Trim(split[0], " ")
 		startTime, _ = getSecFromTime(startTime)
@@ -45,10 +50,25 @@ func readSubtitles(content string) subtitles {
 			if len(split2) > 1 {
 				endTime := strings.Trim(split2[0], " ")
 				endTime, _ = getSecFromTime(endTime)
-				subs = append(subs, subtitle{i, startTime, endTime, strings.ReplaceAll(split2[1], "\n", " ")})
+				text := strings.ReplaceAll(split2[1], "\n", " ")
+				sub := subtitle{
+					i,
+					startTime,
+					endTime,
+					text,
+					"",
+				}
+				wg.Add(1)
+				go func(s *subtitle) {
+					translation, _ := gt.Translate(text, sourceLang, targetLang)
+					s.translation = translation
+					wg.Done()
+				}(&sub)
+				subs = append(subs, &sub)
 			}
 		}
 	}
+	wg.Wait()
 	return subs
 }
 
@@ -63,15 +83,27 @@ func addPSubs(subs subtitles) string {
 </p>
 <p id="%d">
 	%s
+</p>
+<p class="translation" id="%d_translation">
+	&emsp;&emsp;%s
 </p>`,
-				s.index, s.startTime, s.index, s.text),
+				s.index, s.startTime, s.index, s.text, s.index, s.translation),
 		)
 	}
 	return strings.Join(newLines, "\n")
 }
 
+func getLanguage(content string) (string, error) {
+	splitted := strings.Split(content, "Language: ")
+	if len(splitted) < 2 {
+		return "", fmt.Errorf("language not found")
+	}
+	return strings.Split(splitted[1], "\n")[0], nil
+}
+
 func prepareContent(content string) string {
-	subs := readSubtitles(content)
+	sourcelang, _ := getLanguage(content)
+	subs := readSubtitles(content, sourcelang, "pl")
 	content = addPSubs(subs)
 	return content
 }
