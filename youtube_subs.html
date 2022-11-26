@@ -57,7 +57,8 @@
             function highlight(id) {
                 const inputText = document.getElementById(id);
                 inputText.innerHTML = "<span class='highlight'>" + inputText.innerHTML + "</span>";
-                inputText.scrollIntoView();
+                const inputTextPrev = document.getElementById(id - 1);
+                inputTextPrev.scrollIntoView();
             }
 
             let currentLine = 0;
