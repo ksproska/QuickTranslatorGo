@@ -6,46 +6,72 @@ import (
 	"time"
 )
 
-func removeLinesContainingTimestamps(content string) string {
-	lines := strings.Split(content, "\n")
-	var leftLines []string
-	for _, line := range lines {
-		if !strings.Contains(line, "-->") && line != "" {
-			leftLines = append(leftLines, line+" ")
-		}
-		if line == "" {
-			leftLines = append(leftLines, "\n")
-		}
-		if strings.Contains(line, "-->") {
-			leftLines = append(leftLines, strings.Split(line, " -->")[0]+"\t")
-		}
-	}
-	return strings.Join(leftLines, "")
+type subtitle struct {
+	index     int
+	startTime string
+	endTime   string
+	text      string
+}
+type subtitles []subtitle
+
+func removeDescriptors(content string) string {
+	return strings.Join(strings.Split(content, "\n\n")[1:], "\n\n")
 }
 
-func addP(content string) string {
-	lines := strings.Split(content, "\n")
-	var newLines []string
-	for i, line := range lines {
-		timestamp := strings.Split(line, "\t")[0]
-		timeSplited := strings.Split(timestamp, ":")
-		if len(timeSplited) >= 3 {
-			timestamp = fmt.Sprintf("%sh%sm%ss", timeSplited[0], timeSplited[1], timeSplited[2])
-			duration, _ := time.ParseDuration(timestamp)
-			timestamp = fmt.Sprintf("%v", duration.Seconds())
-		}
+func getSecFromTime(timeStr string) (string, error) {
+	timeSplited := strings.Split(timeStr, ":")
+	if len(timeSplited) < 3 {
+		return "", fmt.Errorf("wrong input: %s", timeStr)
+	}
+	timeStr = fmt.Sprintf("%sh%sm%ss", timeSplited[0], timeSplited[1], timeSplited[2])
+	duration, err := time.ParseDuration(timeStr)
+	if err != nil {
+		return "", err
+	}
+	timeStr = fmt.Sprintf("%v", duration.Seconds())
+	return timeStr, nil
+}
 
-		if strings.Contains(line, "\t") {
-			line = strings.Split(line, "\t")[1]
+func readSubtitles(content string) subtitles {
+	var subs []subtitle
+	content = removeDescriptors(content)
+	for i, line := range strings.Split(content, "\n\n") {
+		split := strings.Split(line, "-->")
+		startTime := strings.Trim(split[0], " ")
+		startTime, _ = getSecFromTime(startTime)
+
+		if len(split) > 1 {
+			split2 := strings.SplitN(split[1], "\n", 2)
+			if len(split2) > 1 {
+				endTime := strings.Trim(split2[0], " ")
+				endTime, _ = getSecFromTime(endTime)
+				subs = append(subs, subtitle{i, startTime, endTime, strings.ReplaceAll(split2[1], "\n", " ")})
+			}
 		}
-		newLines = append(newLines, fmt.Sprintf("<p hidden id=\"%d_timestamp\">%s</p><p id=\"%d\">%s</p>", i, timestamp, i, line))
+	}
+	return subs
+}
+
+func addPSubs(subs subtitles) string {
+	var newLines []string
+	for _, s := range subs {
+		newLines = append(newLines,
+			fmt.Sprintf(
+				`
+<p hidden id="%d_timestamp">
+	%s
+</p>
+<p id="%d">
+	%s
+</p>`,
+				s.index, s.startTime, s.index, s.text),
+		)
 	}
 	return strings.Join(newLines, "\n")
 }
 
 func prepareContent(content string) string {
-	content = removeLinesContainingTimestamps(content)
-	content = strings.Join(strings.Split(content, "\n")[1:], "\n")
-	content = addP(content)
+	subs := readSubtitles(content)
+	content = addPSubs(subs)
 	return content
 }

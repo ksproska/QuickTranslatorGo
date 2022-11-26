@@ -5,6 +5,8 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"os/exec"
+	"runtime"
 )
 
 var websitePattern = getWebsitePattern()
@@ -41,8 +43,29 @@ func main() {
 	r := mux.NewRouter()
 	r.Handle("/youtube/{id}", http.HandlerFunc(handle))
 
+	//go func() {
+	//	time.Sleep(3 * time.Second)
+	//	_ = open("http://localhost:3000/youtube/u1yUxpC0xgs")
+	//}()
 	err := http.ListenAndServe(":3000", r)
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func open(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start"}
+	case "darwin":
+		cmd = "open"
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+	}
+	args = append(args, url)
+	return exec.Command(cmd, args...).Start()
 }
